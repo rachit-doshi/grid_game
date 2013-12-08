@@ -28,6 +28,7 @@ function bind_color(color, $object, gridLayer) {
     $object.on('click', function() {
         this.setFill(color);
         gridLayer.draw();
+        clickedElements[$object.index] = color;
     });
 }
 
@@ -45,8 +46,9 @@ function rebind_new_color(new_color, $object, gridLayer) {
     }
 }
 
-function add_select_color_boxes(gridLayer, colors, count, triangle) {
-    var selectColorXPos = 50;    
+function add_select_color_boxes(gridLayer, colors, triangle) {
+    var count = 0;
+    var selectColorXPos = 50;
     var rectangle = [];
     // Setting all colours in rectagles so as to select colors to be displayed
     for (var k = 0; k < colors.length; k++) {
@@ -70,80 +72,68 @@ function add_select_color_boxes(gridLayer, colors, count, triangle) {
     return {'gridLayer': gridLayer, 'rectangle': rectangle, 'triangle': triangle};
 }
 
-function drawGrid(direction, columns, rows, triangleBase, triangleHeight, pageCenter, counter, default_color, triangle, gridLayer, bind_colors, randomKeys) {
-
-    var newLeft = 0, newTop = 0, startTop = 60, i = 0, j = 0;
+function generate_grid_canvas(stage, showColorPicker, default_color, colors, triangleBase, triangleHeight, columns, rows, bind_colors, randomKeys, direction) {
+    var gridLayer = new Kinetic.Layer();
+//pageCenter, startTop, pageCenter, (triangleBase + startTop), (pageCenter - (triangleHeight / 2)), ((triangleBase / 2) + startTop)
+    var counter = 0;
+    var triangle = [];
     var fillColor = 'white';
-    var key = 0;
+    var startLeft = (stage.getWidth() - (columns * (triangleHeight / 2))) / 2;
+    var minRows = ((rows - (columns / 2)) < 0) ? 0 : rows - (columns / 2);
+    var startTop = ((triangleBase) / 2) * (rows - minRows) + 100;
+    var testTop = 0;
+    var i = 0;
     var randomCounters = [];
+    var rowsCount = 0;
 
     if (!bind_colors) {
-        for (key in randomKeys) {
+        for (var key in randomKeys) {
             randomCounters[i++] = key;
         }
     }
 
-
-    for (j = 0; j < (columns / 2); j++) {
-        for (i = 0; i < rows; i++) {
-            if (i === 0) {
-                newLeft = (direction === 'right') ? (pageCenter + (triangleHeight / 2)) : (pageCenter - (triangleHeight / 2));
-                newTop = ((triangleBase / 2) + startTop);
-            }
+    for (var j = 0; j < (columns); j++) {
+        columnRowCount[rowsCount++] = minRows;
+        testTop = startTop;
+        for (var i = 0; i < minRows; i++) {
 
             fillColor = (randomCounters.indexOf('' + counter + '') !== -1) ? randomKeys[counter] : 'white';
-            triangle[counter] = draw_polygon([pageCenter, startTop, pageCenter, (triangleBase + startTop), (pageCenter + (triangleHeight / 2)), ((triangleBase / 2) + startTop)], fillColor, 'lightgray', 1);
+            triangle[counter] = draw_polygon([startLeft, testTop, startLeft, (testTop + triangleBase), (startLeft + (triangleHeight / 2)), (testTop + (triangleBase / 2))], fillColor, 'lightgray', 1);
 
             if (bind_colors) {
                 bind_color(default_color, triangle[counter], gridLayer);
             }
 
             gridLayer.add(triangle[counter++]);
+            testTop += triangleBase;
+        }
 
+        startLeft += (triangleHeight / 2);
+        startTop = (j < (columns) / 2) ? (startTop - (triangleBase / 2)) : (startTop + (triangleBase / 2));
+        minRows = (j < (columns) / 2) ? (minRows + 1) : (minRows - 1);
+        columnRowCount[rowsCount++] = minRows;
+
+        testTop = startTop;
+        for (var i = 0; i < minRows; i++) {
             fillColor = (randomCounters.indexOf('' + counter + '') !== -1) ? randomKeys[counter] : 'white';
-            triangle[counter] = draw_polygon([pageCenter, startTop, pageCenter, (triangleBase + startTop), (pageCenter - (triangleHeight / 2)), ((triangleBase / 2) + startTop)], fillColor, 'lightgray', 1);
+            triangle[counter] = draw_polygon([startLeft, (testTop + triangleBase), startLeft, testTop, (startLeft - ((triangleHeight) / 2)), (testTop + (triangleBase / 2))], fillColor, 'lightgray', 1);
 
             if (bind_colors) {
                 bind_color(default_color, triangle[counter], gridLayer);
             }
+
             gridLayer.add(triangle[counter++]);
-            startTop += triangleBase;
-        }
-        pageCenter = newLeft;
-        rows -= 1;
-        startTop = newTop;
-    }
-
-    var rightXPos = (direction === 'right') ? (pageCenter - (triangleHeight / 2)) : (pageCenter + (triangleHeight / 2));
-    for (i = 0; i < rows; i++) {
-        // last column needs to be redefined, hence this code
-        triangle[counter] = draw_polygon([pageCenter, startTop, pageCenter, (triangleBase + startTop), rightXPos, ((triangleBase / 2) + startTop)], 'white', 'lightgray', 1);
-        if (bind_colors) {
-            bind_color(default_color, triangle[counter], gridLayer);
+            testTop += triangleBase;
         }
 
-        gridLayer.add(triangle[counter++]);
-        startTop += triangleBase;
     }
-
-    return {'gridLayer': gridLayer, 'triangle': triangle, 'counter': counter};
-}
-
-function generate_grid_canvas(stage, showColorPicker, default_color, colors, triangleBase, triangleHeight, columns, rows, bind_colors, randomKeys) {    
-    var gridLayer = new Kinetic.Layer();
-
-    var counter = 0;
-    var triangle = [];
-    var pageCenter = (stage.getWidth() / 2);
-
-    var return_details = drawGrid('right', columns, rows, triangleBase, triangleHeight, pageCenter, counter, default_color, triangle, gridLayer, bind_colors, randomKeys);
-    return_details = drawGrid('left', columns, rows, triangleBase, triangleHeight, pageCenter, return_details['counter'], default_color, return_details['triangle'], return_details['gridLayer'], bind_colors, randomKeys);
 
     if (showColorPicker) {
-        return_details = add_select_color_boxes(return_details['gridLayer'], colors, 0, return_details['triangle']);        
+        return_details = add_select_color_boxes(gridLayer, colors, triangle);
+        triangle = return_details['triangle'];
+        gridLayer = return_details['gridLayer'];
     }
 
-    stage.add(return_details['gridLayer']);
-
-    return return_details['triangle'];
+    stage.add(gridLayer);
+    return triangle;
 }
