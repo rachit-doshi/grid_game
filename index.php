@@ -70,7 +70,10 @@
         $randomColors = array(137 => 'blue', 150 => 'red', 163 => 'blue', 164 => 'orange', 177 => 'darkblue', 178 => 'yellow', 191 => 'black', 192 => 'black',
             193 => 'blue', 206 => 'gray', 207 => 'black', 208 => 'darkgreen', 220 => 'purple', 221 => 'lightgreen', 222 => 'darkblue', 223 => 'darkblue', 234 => 'darkblue',
             235 => 'orange', 236 => 'gray', 237 => 'gray', 247 => 'blue', 248 => 'purple', 249 => 'red', 250 => 'red', 251 => 'gray');
-        /* $randomColors = array(82 => "blue", 92 => "blue", 93 => "blue", 99 => "red", 101 => "red", 103 => "blue", 104 => "blue", 110 => "red", 113 => "red", 115 => "blue",
+        /* $randomColors = array(5 => 'blue', 137 => 'blue', 150 => 'red', 163 => 'blue', 164 => 'orange', 177 => 'darkblue', 178 => 'yellow', 191 => 'black', 192 => 'black',
+          193 => 'blue', 206 => 'gray', 207 => 'black', 208 => 'darkgreen', 220 => 'purple', 221 => 'lightgreen', 222 => 'darkblue', 223 => 'darkblue', 234 => 'darkblue',
+          235 => 'orange', 236 => 'gray', 237 => 'gray', 247 => 'blue', 248 => 'purple', 249 => 'red', 250 => 'red', 251 => 'gray', 399 => 'yellow',);
+          /* $randomColors = array(82 => "blue", 92 => "blue", 93 => "blue", 99 => "red", 101 => "red", 103 => "blue", 104 => "blue", 110 => "red", 113 => "red", 115 => "blue",
           122 => "red", 123 => "red", 124 => "red", 125 => "red", 135 => "red", 136 => "white", 137 => "red", 148 => "red", 149 => "white", 150 => "red", 162 => "red", 163 => "red",
           176 => "red", 177 => "red", 190 => "red", 192 => "red", 205 => "red", 207 => "red", 219 => "red", 220 => "red", 221 => "red", 222 => "red", 233 => "red", 236 => "red",
           238 => "blue", 247 => "red", 249 => "red", 251 => "blue", 252 => "blue", 264 => "blue", 265 => "blue", 277 => "blue", );
@@ -93,7 +96,7 @@
           229 => 'orange', 230 => 'gray', 257 => 'gray', 259 => 'blue', 285 => 'purple', 231 => 'red', 46 => 'red', 286 => 'gray'); */
 
         ksort($randomColors);
-        
+
         // Donot remove this, as this is the eraser
         $randomColors[] = 'white';
         // Colors should be fetched from randomColors unique colors
@@ -139,14 +142,43 @@
 
             document.getElementById('compare').onclick = function() {
                 var leftRandomKeysList = getRandomKeysList(leftCanvas);
-                var left_distances = generate_values(leftRandomKeysList['randomKeys'], leftCanvas, leftRandomKeysList['firstKey'], leftRandomKeysList['lastKey']);
-                console.log(left_distances);
+                var left_distances = generateValues(leftRandomKeysList['randomKeys'], leftCanvas, leftRandomKeysList['firstKey'], leftRandomKeysList['lastKey']);
+
                 var rightRandomKeysList = getRandomKeysList(rightCanvas);
-                var right_distances = generate_values(rightRandomKeysList['randomKeys'], rightCanvas, rightRandomKeysList['firstKey'], rightRandomKeysList['lastKey']);
-                console.log(right_distances);
+                var right_distances = generateValues(rightRandomKeysList['randomKeys'], rightCanvas, rightRandomKeysList['firstKey'], rightRandomKeysList['lastKey']);
+
+                var returnValue = compareValues(left_distances, right_distances);
+                alert((returnValue) ? 'Grids Matched' : 'Grids did not match');
+                return true;
             };
 
-            function generate_values(randomKeys, triangle, firstKey, lastKey) {
+            function compareValues(left_distances, right_distances) {
+                // There are some missing element or additional elements have been drawn
+                if (parseInt(left_distances.length) !== parseInt(right_distances.length)) {
+                    return false;
+                }
+
+                var leftKeysLength = parseInt(left_distances.length);
+                var returnValue = true;
+
+                for (var i = 0; i < leftKeysLength; i++) {
+                    if ((left_distances[i]['color'] !== right_distances[i]['color'])
+                            || (parseInt(left_distances[i]['columnCount']) !== parseInt(right_distances[i]['columnCount']))
+                            || (parseInt(left_distances[i]['distance']) !== parseInt(right_distances[i]['distance']))) {
+//                        console.log('==========================================================');
+//                        console.log('left color == '+left_distances[i]['color']+', right color == '+right_distances[i]['color'])
+//                        console.log('left columnCount == '+parseInt(left_distances[i]['columnCount'])+', right columnCount == '+parseInt(right_distances[i]['columnCount']))
+//                        console.log('left distance == '+parseInt(left_distances[i]['distance'])+', right distance == '+parseInt(right_distances[i]['distance']))
+//                        console.log('==========================================================');
+                        returnValue = false;
+                        break;
+                    }
+                }
+
+                return returnValue;
+            }
+
+            function generateValues(randomKeys, triangle, firstKey, lastKey) {
                 /* Get the first and the last column to loop between
                  * Also get the rowCount till that columns end
                  * Now get the key of the first element
@@ -249,9 +281,8 @@
 
                                 firstKeyNeighbours[firstKeyNeighbour] = 'black';
                                 if (key <= currentTotalRows) {
-//                                    console.log('breaking');
                                     distances[counter]['distance'] = key - firstKeyNeighbour;
-                                    distances[counter]['columnNo'] = columnNo;
+                                    distances[counter]['columnCount'] = iterationColumnNo;
                                     distances[counter++]['color'] = triangle[key].getFill();
                                     break;
                                 }
@@ -273,21 +304,21 @@
                 var triangleColor = '';
                 var firstKey = null;
                 var lastKey = null;
-                
-                for(var i = 0; i < triangle.length; i++) {
+
+                for (var i = 0; i < triangle.length; i++) {
                     triangleColor = triangle[i].getFill();
-                    
-                    if(triangle[i].getFill() !== 'white') {
-                        if(firstKey === null) {
+
+                    if (triangle[i].getFill() !== 'white') {
+                        if (firstKey === null) {
                             firstKey = i;
                         }
-                        
+
                         lastKey = i;
                         randomKeys[i] = triangleColor;
                     }
                 }
-                
-                return {'randomKeys':randomKeys, 'firstKey':firstKey, 'lastKey': lastKey};
+
+                return {'randomKeys': randomKeys, 'firstKey': firstKey, 'lastKey': lastKey};
             }
 
 
