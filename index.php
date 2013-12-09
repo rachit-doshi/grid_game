@@ -113,7 +113,7 @@
             <input type="button" id="reset" class="button" value="Reset" />
         </div>
         <script src="js/kinetic-v4.7.4.min.js"></script>
-        <script src="js/common_functions.js"></script>
+        <script src="js/grid_functions.js"></script>
         <script defer="defer">
             var default_color = '<?php echo $default_color; ?>';
             var colors = <?php echo json_encode($colors); ?>;
