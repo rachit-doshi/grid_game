@@ -99,8 +99,7 @@
 
         // Donot remove this, as this is the eraser
         $randomColors[] = 'white';
-        // Colors should be fetched from randomColors unique colors
-        // $colors = array('red', 'yellow', 'blue', 'orange', 'purple', 'black');
+
         $colors = array_merge(array_unique($randomColors));
         $default_color = $colors[0];
         ?>
@@ -127,17 +126,16 @@
             var randomKeys = <?php echo json_encode($randomColors); ?>;
             var leftStage = new Kinetic.Stage({container: 'left', width: canvasWidth, height: canvasHeight, id: 'left_1'});
             var rightStage = new Kinetic.Stage({container: 'right', width: canvasWidth, height: canvasHeight, id: 'right_1'});
-            var clickedElements = [];
             var columnKeys = [];
             var columnRowCount = [];
 
-            var leftCanvas = generate_grid_canvas(leftStage, false, default_color, colors, triangleBase, triangleHeight, columns, rows, false, randomKeys, 'left');
-            var rightCanvas = generate_grid_canvas(rightStage, true, default_color, colors, triangleBase, triangleHeight, columns, rows, true, randomKeys, 'right');
+            var leftCanvas = generate_grid_canvas(leftStage, false, default_color, colors, triangleBase, triangleHeight, columns, rows, randomKeys);
+            var rightCanvas = generate_grid_canvas(rightStage, true, default_color, colors, triangleBase, triangleHeight, columns, rows, randomKeys);
 
             document.getElementById('reset').onclick = function() {
                 // Clear right stage and recreate
                 rightCanvas.clear();
-                rightCanvas = generate_grid_canvas(rightStage, true, default_color, colors, triangleBase, triangleHeight, columns, rows, true, randomKeys, 'right');
+                rightCanvas = generate_grid_canvas(rightStage, true, default_color, colors, triangleBase, triangleHeight, columns, rows, randomKeys);
             };
 
             document.getElementById('compare').onclick = function() {
@@ -146,182 +144,16 @@
 
                 var rightRandomKeysList = getRandomKeysList(rightCanvas);
                 var right_distances = generateValues(rightRandomKeysList['randomKeys'], rightCanvas, rightRandomKeysList['firstKey'], rightRandomKeysList['lastKey']);
+                var returnValue = false;
 
-                var returnValue = compareValues(left_distances, right_distances);
+                // If the first key color matches with both the grids then perform validations for other triangles
+                if(leftCanvas[leftRandomKeysList['firstKey']].getFill() === rightCanvas[rightRandomKeysList['firstKey']].getFill()) {
+                    returnValue = compareValues(left_distances, right_distances);
+                }
+
                 alert((returnValue) ? 'Grids Matched' : 'Grids did not match');
                 return true;
             };
-
-            function compareValues(left_distances, right_distances) {
-                // There are some missing element or additional elements have been drawn
-                if (parseInt(left_distances.length) !== parseInt(right_distances.length)) {
-                    return false;
-                }
-
-                var leftKeysLength = parseInt(left_distances.length);
-                var returnValue = true;
-
-                for (var i = 0; i < leftKeysLength; i++) {
-                    if ((left_distances[i]['color'] !== right_distances[i]['color'])
-                            || (parseInt(left_distances[i]['columnCount']) !== parseInt(right_distances[i]['columnCount']))
-                            || (parseInt(left_distances[i]['distance']) !== parseInt(right_distances[i]['distance']))) {
-//                        console.log('==========================================================');
-//                        console.log('left color == '+left_distances[i]['color']+', right color == '+right_distances[i]['color'])
-//                        console.log('left columnCount == '+parseInt(left_distances[i]['columnCount'])+', right columnCount == '+parseInt(right_distances[i]['columnCount']))
-//                        console.log('left distance == '+parseInt(left_distances[i]['distance'])+', right distance == '+parseInt(right_distances[i]['distance']))
-//                        console.log('==========================================================');
-                        returnValue = false;
-                        break;
-                    }
-                }
-
-                return returnValue;
-            }
-
-            function generateValues(randomKeys, triangle, firstKey, lastKey) {
-                /* Get the first and the last column to loop between
-                 * Also get the rowCount till that columns end
-                 * Now get the key of the first element
-                 * Set this key as the firstValue
-                 * Get next key
-                 *     If next key lies in the same column, add details
-                 *     Else 
-                 *          go to next column
-                 *          add rowCount for the next column
-                 *          If the key is less than the rowCount, that means key lies in that column, add details
-                 *          Else go to next column
-                 * 
-                 */
-                var firstColumn = null;
-                var lastColumn = null;
-                var counter = -1;
-                var totalRows = 0;
-
-                for (var i = 0; i < columnRowCount.length; i++) {
-                    counter += (parseInt(columnRowCount[i]));
-                    if (counter >= firstKey && firstColumn === null) {
-                        firstColumn = i;
-                        totalRows = counter;
-                        continue;
-                    }
-
-                    if (counter >= lastKey && lastColumn === null) {
-                        lastColumn = i;
-                    }
-                }
-
-
-                /*
-                 * IF firstKey is <|,
-                 *        <|> <|>
-                 *      <|> <|> <|>
-                 *      are the neighbours
-                 *      so when is comes from up to down, +1 is supposed to be added
-                 *      Hence in this case add +1 after 4 iterations, ie. 1st to 2nd, 2nd to 3rd, 3rd to 4th and 4th to 5th Neighbour
-                 *      We have to start with First Column as 0 
-                 * ELSEIF firstKey is |>,
-                 *       <|> <|>  
-                 *      |> <|> <|>
-                 *      are the neighbours
-                 *      so when is comes from up to down, +1 is supposed to be added
-                 *      Hence in this case add +1 after 4 iterations
-                 *      Hence in this case add +1 after 4 iterations, ie. 1st to 2nd, 2nd to 3rd, 3rd to 4th and 4th to 5th Neighbour
-                 *      We have to start with First Column as 1
-                 */
-
-                var iterationColumnNo = (firstColumn % 2 === 0) ? 1 : 0;
-                var firstKeyNeighbour = firstKey;
-                var currentTotalRows = totalRows;
-                var key = 0;
-                var distances = [];
-                var counter = 0;
-                var firstKeyNeighbours = {};
-                // if coding starts from <|then after 4th interation add one
-                // if coding starts from |> then after 3rd interation add one
-                var iterationCount = 4;
-                var rws = 0;
-
-                for (key in randomKeys) {
-                    // Ignoring 1st key
-                    if (parseInt(key) !== parseInt(firstKey)) {
-                        // If next key lies in the same column as the firstKey
-                        if (key <= currentTotalRows) {
-                            distances[counter] = [];
-                            distances[counter]['distance'] = key - firstKey;
-                            distances[counter]['columnCount'] = 0;
-                            distances[counter++]['color'] = triangle[key].getFill();
-                            // Key lies in next column so iterate to another column
-                        } else {
-                            distances[counter] = [];
-                            // Iterate through all columns untill current key's column is found
-                            for (var columnNo = firstColumn + 1; columnNo <= lastColumn; columnNo++) {
-                                iterationColumnNo++;
-
-                                // add current columns rowCount to currentTotalRows
-                                currentTotalRows += parseInt(columnRowCount[columnNo]);
-                                rws = (parseInt(columnNo) <= 20) ? (columnNo - 1) : columnNo;
-                                // add previous rows column to firstKeyNeighbour to get the next neighbour
-                                // But after half the grid is completed we have to take current rows column
-                                firstKeyNeighbour += parseInt(columnRowCount[rws]);
-
-//                                console.log('==========================================================');
-//                                console.log('Key == ' + key);
-//                                console.log('columnNo == ' + columnNo);
-//                                console.log('columnRowCount[columnNo] == ' + columnRowCount[columnNo]);
-//                                console.log('iterationColumnNo == ' + iterationColumnNo);
-//                                console.log('currentTotalRows == ' + currentTotalRows);
-//                                console.log('firstKeyNeighbour == ' + firstKeyNeighbour);
-//                                console.log('==========================================================');
-
-
-                                // now we have to move from up to down by 1 row if iteration column % 4 is 0
-                                if (parseInt(iterationColumnNo) % parseInt(iterationCount) === 0) {
-                                    firstKeyNeighbour += 1;
-                                }
-
-                                firstKeyNeighbours[firstKeyNeighbour] = 'black';
-                                if (key <= currentTotalRows) {
-                                    distances[counter]['distance'] = key - firstKeyNeighbour;
-                                    distances[counter]['columnCount'] = iterationColumnNo;
-                                    distances[counter++]['color'] = triangle[key].getFill();
-                                    break;
-                                }
-
-                            }
-                        }
-                    }
-
-                    iterationColumnNo = (firstColumn % 2 === 0) ? 1 : 0;
-                    firstKeyNeighbour = firstKey;
-                    currentTotalRows = totalRows;
-                }
-
-                return distances;
-            }
-
-            function getRandomKeysList(triangle) {
-                var randomKeys = {};
-                var triangleColor = '';
-                var firstKey = null;
-                var lastKey = null;
-
-                for (var i = 0; i < triangle.length; i++) {
-                    triangleColor = triangle[i].getFill();
-
-                    if (triangle[i].getFill() !== 'white') {
-                        if (firstKey === null) {
-                            firstKey = i;
-                        }
-
-                        lastKey = i;
-                        randomKeys[i] = triangleColor;
-                    }
-                }
-
-                return {'randomKeys': randomKeys, 'firstKey': firstKey, 'lastKey': lastKey};
-            }
-
-
         </script>
     </body>
 
